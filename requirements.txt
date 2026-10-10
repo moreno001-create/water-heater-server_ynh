@@ -1,0 +1,4 @@
+py-aosmith
+fastapi
+uvicorn
+aiohttp

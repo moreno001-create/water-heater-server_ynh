@@ -1,0 +1,969 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Water Heater</title>
+<style>
+/* Light blue theme. Colors are tokens so the chart, ring and badges follow automatically. */
+:root{--bg:#e6f1fd;--bg2:#f5f9ff;--card:rgba(255,255,255,.82);--ink:#0f2742;--dim:#58738f;--line:#d2e3f6;--fill:#eef5fd;
+--acc:#2f8cf5;--acc2:#1170e4;--accSoft:#2f8cf51f;--cyan:#38c6e8;--ok:#1f9d63;--bad:#e5484d;--warn:#e8890c;
+--sHw:#2f8cf5;--sSun:#d9730d;--sEst:#c0369b;--sHp:#0f9b8e;--sEl:#d9730d;
+--shadow:0 1px 2px rgba(17,60,120,.06),0 8px 24px rgba(17,60,120,.08);--r:20px;--rs:12px}
+@media(prefers-color-scheme:dark){:root{--bg:#0a1626;--bg2:#0e2038;--card:rgba(20,40,66,.78);--ink:#e6f1ff;--dim:#8fa9c6;--line:#23405f;--fill:#12263f;
+--acc:#4da3ff;--acc2:#3b8fef;--accSoft:#4da3ff26;--cyan:#4fd1ee;--ok:#3ccf8e;--bad:#ff6b70;--warn:#f5a524;--shadow:0 8px 24px rgba(0,0,0,.35)}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%;background:var(--bg)}
+body{margin:0;min-height:100vh;background:linear-gradient(180deg,var(--bg) 0,var(--bg2) 100%) fixed;color:var(--ink);
+font:16px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,system-ui,sans-serif;font-variant-numeric:tabular-nums}
+.wrap{max-width:1040px;margin:0 auto;padding:20px 16px 60px}
+@media(max-width:520px){.sp b{font-size:56px}.grid{grid-template-columns:1fr}button,select,input{min-height:44px}}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:20px}
+h1{font-size:26px;font-weight:750;letter-spacing:-.02em;margin:0;flex:1 1 auto;display:flex;align-items:center;gap:10px}
+h1 .logo{width:30px;height:30px;flex:none}
+h2{font-size:12px;font-weight:650;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);margin:0 0 14px}
+.card{background:var(--card);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:var(--r);padding:20px;box-shadow:var(--shadow)}
+.grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));margin-bottom:16px}
+select,input,button{font:inherit;color:inherit}
+select,input{background:var(--fill);border:1px solid var(--line);border-radius:var(--rs);padding:9px 12px;min-width:0;outline:none;transition:border-color .15s,box-shadow .15s}
+select:focus,input:focus{border-color:var(--acc);box-shadow:0 0 0 3px var(--accSoft)}
+button{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:9px 18px;font-weight:550;cursor:pointer;transition:transform .08s,border-color .15s,box-shadow .15s,background .15s}
+button:hover{border-color:var(--acc)}button:active{transform:scale(.97)}
+button:focus-visible{outline:none;box-shadow:0 0 0 3px var(--accSoft);border-color:var(--acc)}
+button.primary{background:linear-gradient(135deg,var(--acc),var(--acc2));border-color:transparent;color:#fff;box-shadow:0 4px 12px #1170e440}
+button.danger{color:var(--bad)}
+button:disabled{opacity:.45;cursor:default;box-shadow:none;transform:none}
+.badge{display:inline-block;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:650;letter-spacing:0;text-transform:none;background:var(--line);color:var(--dim)}
+.badge.ok{background:color-mix(in srgb,var(--ok) 16%,transparent);color:var(--ok)}.badge.bad{background:color-mix(in srgb,var(--bad) 16%,transparent);color:var(--bad)}
+.badge.warn{background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn)}.badge.blue{background:var(--accSoft);color:var(--acc)}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.muted{color:var(--dim);font-size:14px}
+.ring{position:relative;width:170px;height:170px;margin:4px auto 0;filter:drop-shadow(0 6px 14px #2f8cf533)}
+.ring svg{transform:rotate(-90deg);width:100%;height:100%}
+.ring .v{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring .v b{font-size:38px;font-weight:750;letter-spacing:-.02em}
+.sp{display:flex;align-items:center;justify-content:center;gap:16px;margin:6px 0 16px}
+.sp b{font-size:56px;font-weight:750;letter-spacing:-.03em;min-width:130px;text-align:center}
+.sp button{width:48px;height:48px;font-size:24px;border-radius:50%;padding:0;line-height:1}
+input[type=range]{width:100%;padding:0;accent-color:var(--acc);min-height:0}
+.modes{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.modes button{flex:1 1 110px;border-radius:var(--rs);background:var(--fill)}
+.modes button.sel{border-color:var(--acc);box-shadow:0 0 0 3px var(--accSoft)}
+.modes button.cur{background:linear-gradient(135deg,var(--acc),var(--acc2));border-color:transparent;color:#fff;box-shadow:0 4px 12px #1170e440}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px}
+.stat{background:var(--fill);border:1px solid var(--line);border-radius:var(--rs);padding:12px 14px}.stat b{display:block;font-size:22px;font-weight:700;letter-spacing:-.01em}
+.chartbox{position:relative}
+#chart{width:100%;height:170px;display:block;touch-action:pan-y;cursor:pointer}
+#chart .bar{transition:opacity .1s}#chart.hov .bar{opacity:.4}#chart.hov .bar.on{opacity:1}
+#tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);padding:6px 10px;border-radius:10px;font-size:13px;line-height:1.3;white-space:nowrap;transform:translate(-50%,-100%);opacity:0;transition:opacity .08s;z-index:5}
+#tip.show{opacity:1}#tip b{display:block;font-size:15px}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);padding:6px 10px;border-radius:10px;font-size:13px;line-height:1.35;white-space:nowrap;transform:translate(-50%,-100%);opacity:0;transition:opacity .08s;z-index:5}
+.tip.show{opacity:1}.tip b{display:block;font-size:15px}
+.chart{width:100%;height:auto;display:block;touch-action:pan-y}
+.chart .bar{transition:opacity .1s}.chart.hov .bar{opacity:.4}.chart.hov .bar.on{opacity:1}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--dim);margin-top:8px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.legend i.ln{height:3px;border-radius:2px;vertical-align:3px;width:16px}
+.ring.est{filter:drop-shadow(0 6px 14px #c0369b33)}
+details.cfg summary{cursor:pointer;font-weight:600;list-style:none;display:flex;align-items:center;gap:8px}
+details.cfg summary::-webkit-details-marker{display:none}
+details.cfg summary::before{content:"";width:8px;height:8px;border-right:2px solid var(--dim);border-bottom:2px solid var(--dim);transform:rotate(-45deg);transition:transform .15s}
+details.cfg[open] summary::before{transform:rotate(45deg)}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:14px}
+.form label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--dim)}
+.form label.wide{grid-column:1/-1}
+.form input,.form select{width:100%;color:var(--ink)}
+.tabs{display:flex;gap:6px;margin:-6px 0 18px;background:var(--fill);border:1px solid var(--line);border-radius:999px;padding:4px;width:max-content;max-width:100%}
+.tabs button{border:0;background:transparent;padding:7px 18px;box-shadow:none}
+.tabs button.on{background:var(--card);box-shadow:var(--shadow);color:var(--acc2)}
+@media(prefers-color-scheme:dark){.tabs button.on{color:var(--acc)}}
+.switch{display:flex;align-items:center;gap:12px;cursor:pointer;margin-bottom:14px;font-weight:550}
+.switch input{appearance:none;-webkit-appearance:none;width:50px;height:30px;border-radius:99px;background:var(--line);position:relative;margin:0;padding:0;min-height:0;cursor:pointer;transition:background .15s;flex:none;border:0}
+.switch input::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 3px #0003;transition:transform .15s}
+.switch input:checked{background:var(--ok)}.switch input:checked::after{transform:translateX(20px)}
+.switch input:focus-visible{box-shadow:0 0 0 3px var(--accSoft)}
+.meter{position:relative;height:8px;border-radius:99px;background:var(--line);margin-top:8px;overflow:visible}
+.meter i{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:var(--sHw);transition:width .4s}
+.meter i.hot{background:var(--bad)}
+.meter b{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink);border-radius:1px}
+.events{list-style:none;margin:12px 0 0;padding:0;font-size:13px;color:var(--dim)}
+.events li{padding:6px 0;border-top:1px solid var(--line)}.events time{color:var(--ink);font-weight:600;margin-right:8px;white-space:nowrap}
+.help{font-size:12.5px;color:var(--dim);margin:12px 0 0;padding-left:18px}.help li{margin:3px 0}.help code{font-size:12px;background:var(--fill);padding:1px 5px;border-radius:5px;word-break:break-all}
+#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:11px 18px;border-radius:999px;opacity:0;pointer-events:none;transition:opacity .2s;max-width:90vw;z-index:9;box-shadow:var(--shadow)}
+#toast.show{opacity:1}#toast.err{background:var(--bad);color:#fff}
+.login{max-width:400px;margin:10vh auto 0}
+.login h1{font-size:30px;margin-bottom:6px}
+.login input{width:100%;margin-bottom:12px}
+.login button.primary{width:100%;padding:12px}
+.hidden{display:none!important}
+.warn-box{background:color-mix(in srgb,var(--warn) 12%,transparent);border:1px solid var(--warn);color:var(--ink);border-radius:var(--rs);padding:9px 12px;font-size:13px;margin-top:12px}
+.warn-box.hot{background:color-mix(in srgb,var(--bad) 12%,transparent);border-color:var(--bad)}
+dialog{background:var(--bg2);color:var(--ink);border:1px solid var(--line);border-radius:var(--r);padding:22px;max-width:380px;box-shadow:0 20px 60px #0a1f4040}
+dialog::backdrop{background:#0a1f4066;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+dialog h3{margin:0 0 8px;font-size:20px}dialog p{margin:0 0 18px;color:var(--dim)}
+.note{font-size:12.5px;color:var(--dim);margin-top:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- Sign in -->
+<div id="loginView" class="login hidden">
+  <div class="card">
+    <h1><svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#38c6e8"/><stop offset="1" stop-color="#1170e4"/></linearGradient></defs><path d="M16 3C16 3 6 14.5 6 20.5a10 10 0 0 0 20 0C26 14.5 16 3 16 3Z" fill="url(#lg)"/><path d="M12 21a4 4 0 0 0 4 4" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="2" stroke-linecap="round"/></svg>Water Heater</h1>
+    <p class="muted" style="margin-top:0">Sign in with your A. O. Smith iCOMM account.</p>
+    <form id="loginForm">
+      <input id="email" type="email" placeholder="Email" autocomplete="username" required>
+      <input id="password" type="password" placeholder="Password" autocomplete="current-password" required>
+      <label class="row muted hidden" id="rememberWrap" style="margin-bottom:10px"><input type="checkbox" id="remember" style="width:auto;margin:0"> <span id="rememberText">Stay signed in on this device</span></label>
+      <div class="row"><button class="primary" id="loginBtn">Sign in</button>
+        <button type="button" id="demoBtn">Try demo mode</button></div>
+    </form>
+    <p class="note" id="loginNote">Credentials stay in memory on this computer only and are never saved to disk. Unofficial API - not affiliated with A. O. Smith.</p>
+  </div>
+</div>
+
+<!-- App -->
+<div id="appView" class="hidden">
+<header>
+  <h1><svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><defs><linearGradient id="lg2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#38c6e8"/><stop offset="1" stop-color="#1170e4"/></linearGradient></defs><path d="M16 3C16 3 6 14.5 6 20.5a10 10 0 0 0 20 0C26 14.5 16 3 16 3Z" fill="url(#lg2)"/><path d="M12 21a4 4 0 0 0 4 4" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="2" stroke-linecap="round"/></svg>Water Heater</h1>
+  <label class="row muted">Water heater
+    <select id="heater"></select></label>
+  <span id="online" class="badge"></span>
+  <span id="kind" class="badge blue hidden">DEMO</span>
+  <button id="logout">Sign out</button>
+</header>
+<nav class="tabs" id="tabs"><button type="button" data-tab="heater" class="on">Water heater</button><button type="button" data-tab="solar">Solar</button></nav>
+<section id="tabHeater">
+
+<div class="grid">
+  <div class="card">
+    <h2>Hot water <span class="muted" style="text-transform:none;letter-spacing:0;font-weight:500">heater's reading</span></h2>
+    <div class="ring">
+      <svg viewBox="0 0 150 150">
+        <circle cx="75" cy="75" r="62" fill="none" stroke="var(--line)" stroke-width="14"/>
+        <defs><linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--cyan)"/><stop offset="1" stop-color="var(--acc2)"/></linearGradient></defs>
+        <circle id="ringFg" cx="75" cy="75" r="62" fill="none" stroke="url(#ringGrad)" stroke-width="14" stroke-linecap="round" stroke-dasharray="0 390" style="transition:stroke-dasharray .6s"/>
+      </svg>
+      <div class="v"><b id="hw">-</b><span class="muted">of tank</span></div>
+    </div>
+    <p class="muted" id="info" style="text-align:center;margin:14px 0 0"></p>
+  </div>
+
+  <div class="card hidden" id="estCard">
+    <h2>Hot water <span class="muted" style="text-transform:none;letter-spacing:0;font-weight:500">estimated from heating cycles</span> <span id="estBadge" class="badge blue hidden">Heating</span></h2>
+    <div class="ring est">
+      <svg viewBox="0 0 150 150">
+        <circle cx="75" cy="75" r="62" fill="none" stroke="var(--line)" stroke-width="14"/>
+        <circle id="estRing" cx="75" cy="75" r="62" fill="none" stroke="var(--sEst)" stroke-width="14" stroke-linecap="round" stroke-dasharray="0 390" style="transition:stroke-dasharray .6s"/>
+      </svg>
+      <div class="v"><b id="estVal">-</b><span class="muted">estimated</span></div>
+    </div>
+    <p class="muted" id="estInfo" style="text-align:center;margin:14px 0 0"></p>
+    <p class="note" id="estSrc" style="text-align:center"></p>
+  </div>
+
+  <div class="card">
+    <h2>Temperature setpoint <span id="spPending" class="badge warn hidden">updating</span></h2>
+    <div class="sp"><button id="spDown" aria-label="Lower">-</button><b id="spVal">-</b><button id="spUp" aria-label="Raise">+</button></div>
+    <input id="spRange" type="range" min="95" max="140" step="1">
+    <div id="spWarn" class="warn-box hidden"></div>
+    <div class="row" style="margin-top:12px;justify-content:space-between">
+      <span class="muted">Max <span id="spMax">-</span>&deg;</span>
+      <button class="primary" id="spApply" disabled>Apply setpoint</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Mode <span id="modePending" class="badge warn hidden">updating</span></h2>
+    <div class="modes" id="modes"></div>
+    <div class="row" id="modeOpts" style="margin-bottom:12px">
+      <label class="row muted hidden" id="daysWrap">Days <input id="days" type="number" min="1" max="100" value="7" style="width:80px"></label>
+      <label class="row muted hidden" id="hwpWrap">Hot Water+ <select id="hwp"><option value="0">Off</option><option value="1">Level 1</option><option value="2">Level 2</option><option value="3">Level 3</option></select></label>
+    </div>
+    <button class="primary" id="modeApply" disabled>Apply mode</button>
+    <p class="note" id="modeNote"></p>
+  </div>
+</div>
+
+<div class="card hidden act" style="margin-bottom:16px">
+  <h2>Heater's reading vs estimate (24 h)</h2>
+  <div class="chartbox"><svg id="cmpChart" class="chart" role="img" aria-label="Hot water level over the last 24 hours: heater's reading and the estimate, with heating cycles"></svg><div id="cmpTip" class="tip"></div></div>
+  <div class="legend"><span><i class="ln" style="background:var(--sHw)"></i>Heater's reading</span><span><i class="ln" style="background:var(--sEst)"></i>Estimate</span>
+    <span><i style="background:var(--sHp)"></i>Heat pump on</span><span><i style="background:var(--sEl)"></i>Element on</span></div>
+  <p class="note" id="cmpNote"></p>
+</div>
+
+<div class="card hidden act" style="margin-bottom:16px">
+  <h2>Heating today (24 h)</h2>
+  <div class="chartbox"><svg id="dayChart" class="chart" role="img" aria-label="Minutes of heating per hour today"></svg><div id="dayTip" class="tip"></div></div>
+  <div class="legend"><span><i style="background:var(--sHp)"></i>Heat pump</span><span><i style="background:var(--sEl)"></i>Element</span><span id="typLegend"><i class="ln" style="background:var(--ink)"></i>Typical day</span></div>
+</div>
+
+<div class="card hidden act" style="margin-bottom:16px">
+  <h2>Heating cycles (30 days)</h2>
+  <div class="stats">
+    <div class="stat"><span class="muted">Cycles per day</span><b id="cyDay">-</b></div>
+    <div class="stat"><span class="muted">Average cycle</span><b id="cyLen">-</b></div>
+    <div class="stat"><span class="muted">Heating per day</span><b id="cyHours">-</b></div>
+    <div class="stat"><span class="muted">On element</span><b id="cyEl">-</b></div>
+  </div>
+  <div class="chartbox"><svg id="trendChart" class="chart" role="img" aria-label="Hours of heating per day for the last 30 days, heat pump and element"></svg><div id="trendTip" class="tip"></div></div>
+  <div class="legend"><span><i style="background:var(--sHp)"></i>Heat pump</span><span><i style="background:var(--sEl)"></i>Element</span></div>
+</div>
+
+<div class="card" style="margin-bottom:16px">
+  <h2>Energy use</h2>
+  <div class="stats">
+    <div class="stat"><span class="muted">Last 7 days</span><b id="e7">-</b></div>
+    <div class="stat"><span class="muted">Last 30 days</span><b id="e30">-</b></div>
+    <div class="stat"><span class="muted">Lifetime</span><b id="eLife">-</b></div>
+    <div class="stat"><span class="muted">Est. cost (30d)</span><b id="eCost">-</b>
+      <span class="muted">$/kWh <input id="rate" type="number" step="0.01" min="0" value="0.15" style="width:70px;padding:3px 6px"></span></div>
+  </div>
+  <div class="chartbox"><svg id="chart" preserveAspectRatio="none"></svg><div id="tip"></div></div>
+</div>
+
+<div class="card hidden act" style="margin-bottom:16px">
+  <details class="cfg" id="cfgBox"><summary>Cycle monitor settings <span class="badge" id="cfSource" style="margin-left:4px"></span></summary>
+  <p class="muted" style="margin:12px 0 0">The iCOMM cloud doesn't say when the heater is running. For accurate on/off cycles, point this at a power
+    reading for the heater's circuit. Without one, cycles are worked out from the iCOMM kWh counter, which is much coarser.</p>
+  <form id="cfgForm" class="form" onsubmit="return false">
+    <label class="wide">Power meter URL (leave empty to use the iCOMM kWh counter)<input id="cfUrl" type="url" placeholder="http://192.168.1.50/rpc/EM1.GetStatus?id=0"></label>
+    <label>JSON field with the power<input id="cfPath" placeholder="act_power"></label>
+    <label>Unit<select id="cfUnit"><option>W</option><option>kW</option></select></label>
+    <label>Bearer token (Home Assistant)<input id="cfToken" type="password" autocomplete="off" placeholder="none"></label>
+    <label>Tank size (gallons)<input id="cfGal" type="number" min="20" max="120"></label>
+    <label>Cold water inlet (&deg;F)<input id="cfInlet" type="number" min="32" max="90"></label>
+    <label>Heat pump efficiency (COP)<input id="cfCop" type="number" min="1" max="6" step="0.1"></label>
+    <label>Heating above (W)<input id="cfOn" type="number" min="1" max="2000"></label>
+    <label>Element above (W)<input id="cfEl" type="number" min="500" max="10000"></label>
+  </form>
+  <div class="row" style="margin-top:14px"><button type="button" id="cfTest">Test reading</button><button type="button" class="primary" id="cfSave">Save</button><span class="muted" id="cfMsg"></span></div>
+  <ul class="help">
+    <li>Shelly Pro EM / EM Gen3: <code>http://IP/rpc/EM1.GetStatus?id=0</code>, field <code>act_power</code></li>
+    <li>Shelly Pro 3EM: <code>http://IP/rpc/EM.GetStatus?id=0</code>, field <code>total_act_power</code></li>
+    <li>Shelly EM (Gen1): <code>http://IP/status</code>, field <code>emeters.0.power</code></li>
+    <li>Home Assistant: <code>http://HA:8123/api/states/sensor.water_heater_power</code>, field <code>state</code>, plus a long-lived access token</li>
+    <li>Tasmota: <code>http://IP/cm?cmnd=Status%208</code>, field <code>StatusSNS.ENERGY.Power</code></li>
+  </ul>
+  <p class="note">The heat pump draws a few hundred watts and the elements about 4,500 W, so "Element above" tells them apart.
+    COP is how much heat the heat pump moves per unit of electricity (about 3; lower in a cold room). Changes apply from the next reading.</p>
+  </details>
+</div>
+
+</section>
+
+<section id="tabSolar" class="hidden">
+<div class="grid">
+  <div class="card">
+    <h2>Solar &amp; battery <span class="muted" id="solUpdated" style="text-transform:none;letter-spacing:0;font-weight:500"></span></h2>
+    <div class="stats" style="grid-template-columns:repeat(2,1fr)">
+      <div class="stat"><span class="muted">Solar</span><b id="sPv">-</b></div>
+      <div class="stat"><span class="muted">Battery</span><b id="sSoc">-</b><span class="muted" id="sBat"></span></div>
+      <div class="stat" style="grid-column:1/-1"><span class="muted">Inverter output</span><b id="sInv">-</b>
+        <div class="meter" role="img" id="sMeter"><i id="sMeterFill"></i><b id="sMeterLimit" title="Dump-load cut-off"></b></div>
+        <span class="muted" id="sInvSub" style="display:block;margin-top:8px"></span></div>
+      <div class="stat" style="grid-column:1/-1"><span class="muted">Grid</span><b id="sGrid" style="font-size:17px">-</b></div>
+    </div>
+    <p class="note" id="solErr"></p>
+  </div>
+
+  <div class="card">
+    <h2>Solar dump load <span id="dumpBadge" class="badge"></span></h2>
+    <label class="switch"><input type="checkbox" id="dumpOn" role="switch"> Use the water heater as a dump load</label>
+    <div class="modes" id="dumpModes">
+      <button type="button" data-m="electric">Electric</button><button type="button" data-m="hybrid">Hybrid</button>
+    </div>
+    <label class="switch" style="font-weight:500;margin-bottom:8px"><input type="checkbox" id="boostOn" role="switch"> Raise the setpoint while dumping</label>
+    <div class="row muted" id="boostRow" style="margin:0 0 6px 62px">to <input id="boostSp" type="number" min="100" max="140" style="width:84px"> &deg;F, then back afterwards</div>
+    <div id="boostWarn" class="warn-box hidden" style="margin:0 0 12px"></div>
+    <label class="row muted hidden" id="dumpHeaterWrap" style="margin-bottom:12px">Water heater <select id="dumpHeater"></select></label>
+    <p id="dumpStatus" style="margin:0"></p>
+    <p class="note" id="dumpNote"></p>
+    <ul class="events" id="dumpEvents"></ul>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:16px">
+  <h2>Solar &amp; inverter (24 h)</h2>
+  <div class="chartbox"><svg id="solChart" class="chart" role="img" aria-label="Solar power and inverter output over the last 24 hours, with the times the water heater was used as a dump load"></svg><div id="solTip" class="tip"></div></div>
+  <div class="legend"><span><i class="ln" style="background:var(--sSun)"></i>Solar</span><span><i class="ln" style="background:var(--sHw)"></i>Inverter output</span>
+    <span><i class="ln" style="background:repeating-linear-gradient(90deg,var(--dim) 0 4px,transparent 4px 7px)"></i>Cut-off</span><span><i style="background:var(--sEst)"></i>Dumping into water heater</span></div>
+</div>
+
+<div class="card" style="margin-bottom:16px">
+  <h2>Battery (24 h)</h2>
+  <div class="chartbox"><svg id="socChart" class="chart" role="img" aria-label="Battery charge over the last 24 hours"></svg><div id="socTip" class="tip"></div></div>
+  <div class="legend"><span><i class="ln" style="background:var(--sHp)"></i>Battery charge</span><span><i class="ln" style="background:repeating-linear-gradient(90deg,var(--dim) 0 4px,transparent 4px 7px)"></i>Dump start / stop levels</span></div>
+</div>
+
+<div class="card" style="margin-bottom:16px">
+  <details class="cfg" id="solCfg"><summary>Solar settings</summary>
+  <p class="muted" style="margin:12px 0 0">Uses the same account as the EG4 Monitor app. The inverter's Wi-Fi dongle uploads its data there, and this server
+    reads it about once a minute. Your EG4 password is saved on this server, readable only by the app.</p>
+  <form class="form" onsubmit="return false">
+    <label>EG4 Monitor email / username<input id="sfAcct" autocomplete="off"></label>
+    <label>EG4 Monitor password<input id="sfPass" type="password" autocomplete="off"></label>
+    <label>Inverter<select id="sfSerial"><option value="">First on the account</option></select></label>
+    <label>Start dumping at battery (%)<input id="sfStart" type="number" min="50" max="100"></label>
+    <label>Stop below battery (%)<input id="sfStop" type="number" min="10" max="100"></label>
+    <label>Only with solar above (W)<input id="sfPv" type="number" min="0" max="30000" step="100"></label>
+    <label>Stop if battery discharges above (W)<input id="sfDis" type="number" min="0" max="10000" step="50"></label>
+    <label>Inverter rating (W)<input id="sfRated" type="number" min="1000" max="30000" step="100"></label>
+    <label>Cut off at (% of rating)<input id="sfLimit" type="number" min="50" max="100"></label>
+    <label>Near the limit<select id="sfAction"><option value="disable">Turn the dump load off</option><option value="pause">Pause it for a while</option></select></label>
+    <label>Pause for (minutes)<input id="sfPause" type="number" min="1" max="1440"></label>
+    <label>Minimum minutes between switches<input id="sfSwitch" type="number" min="1" max="120"></label>
+  </form>
+  <div class="row" style="margin-top:14px"><button type="button" id="sfConnect">Connect &amp; find inverter</button><button type="button" class="primary" id="sfSave">Save</button><span class="muted" id="sfMsg"></span></div>
+  <p class="note">The water heater is on the inverter's output, so the element (about 4,500 W) counts against the inverter's rating. Electric-mode
+    dumping only starts when the house load plus 4,500 W stays under the cut-off. If the output reaches the cut-off while dumping, the heater goes
+    back to its previous mode right away. The cloud data is about a minute old, so this backs up the inverter's own overload protection; it doesn't replace it.</p>
+  </details>
+</div>
+</section>
+</div>
+</div>
+<dialog id="hotDlg">
+  <h3>Scald risk</h3>
+  <p id="hotMsg"></p>
+  <div class="row" style="justify-content:flex-end"><button id="hotNo">Cancel</button><button class="primary" id="hotYes">Set it anyway</button></div>
+</dialog>
+<div id="toast"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const LABEL = {electric:"Electric", heat_pump:"Heat Pump", hybrid:"Hybrid", vacation:"Vacation", guest:"Guest"};
+const label = m => LABEL[m] || m;
+const SAFE_TEMP = 120;
+let devices = [], dev = null, selMode = null, spValue = null, timer = null;
+
+function store(k, v){ try{ if(v===undefined) return localStorage.getItem(k); localStorage.setItem(k, v);}catch{ return null; } }
+
+/* In the Android and iOS apps the same API is served by native code through a JS bridge (WebViews cannot read POST bodies). */
+const IOS = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.iosBridge;
+const NATIVE = typeof window.AndroidBridge !== "undefined" || !!IOS;
+const waiting = {}; let seq = 0;
+window.__aoResolve = (id, status, text) => { const f = waiting[id]; delete waiting[id]; if(f) f(status, text); };
+function nativeFetch(path, opt){
+  const wrap = (status, text) => ({ok: status >= 200 && status < 300, status, statusText: "", json: async () => JSON.parse(text)});
+  if(IOS) return IOS.postMessage({method: opt.method || "GET", path, body: opt.body ? JSON.stringify(opt.body) : ""}).then(([status, text]) => wrap(status, text));
+  return new Promise(res => {
+    const id = ++seq;
+    waiting[id] = (status, text) => res(wrap(status, text));
+    window.AndroidBridge.request(id, opt.method || "GET", path, opt.body ? JSON.stringify(opt.body) : "");
+  });
+}
+async function api(path, opt = {}){
+  const r = NATIVE ? await nativeFetch(path, opt)
+    : await fetch(path.replace(/^\//, ""), {method: opt.method || "GET", headers: {"Content-Type": "application/json"},   // relative, so it works under a sub-path
+        body: opt.body ? JSON.stringify(opt.body) : undefined});
+  if(!NATIVE && r.redirected){ location.reload(); return new Promise(() => {}); }   // login portal (e.g. YunoHost SSO) session expired
+  if(!r.ok){
+    let m = r.statusText;
+    try{ const j = await r.json(); m = typeof j.detail === "string" ? j.detail : JSON.stringify(j.detail); }catch{}
+    const e = new Error(m); e.status = r.status; throw e;
+  }
+  return r.json();
+}
+let tt;
+function toast(msg, err){
+  const t = $("#toast"); t.textContent = msg; t.className = "show" + (err ? " err" : "");
+  clearTimeout(tt); tt = setTimeout(() => t.className = "", 3500);
+}
+async function guard(fn){
+  try{ return await fn(); }
+  catch(e){ if(e.status === 401){ showLogin(); } toast(e.message, true); }
+}
+function el(tag, props = {}, ...kids){
+  const n = document.createElement(tag);
+  const {dataset, ...rest} = props;
+  Object.assign(n, rest);
+  if(dataset) Object.assign(n.dataset, dataset);
+  kids.forEach(k => n.append(k));
+  return n;
+}
+
+/* ---------- session ---------- */
+function showLogin(){ $("#appView").classList.add("hidden"); $("#loginView").classList.remove("hidden"); clearInterval(timer); }
+async function boot(){
+  const s = await api("/api/session");
+  if(NATIVE){
+    $("#rememberWrap").classList.remove("hidden");
+    $("#loginNote").textContent = `Your password is sent only to A. O. Smith. If you tick “Stay signed in” it is stored encrypted on this phone (${IOS ? "iOS Keychain" : "Android Keystore"}); otherwise it is kept in memory only. Unofficial API - not affiliated with A. O. Smith.`;
+  } else if(s.can_remember){
+    $("#rememberWrap").classList.remove("hidden");
+    $("#rememberText").textContent = "Stay signed in on this server";
+    $("#loginNote").textContent = "Your password is sent only to A. O. Smith. If you tick “Stay signed in” it is saved on this server (readable only by the app) so the dashboard reconnects after a restart. Everyone who can open this page shares the same connection. Unofficial API - not affiliated with A. O. Smith.";
+  }
+  if(s.saved_email && !$("#email").value) $("#email").value = s.saved_email;
+  if(s.error) toast(s.error, true);
+  if(!s.connected) return showLogin();
+  $("#loginView").classList.add("hidden"); $("#appView").classList.remove("hidden");
+  $("#kind").classList.toggle("hidden", s.kind !== "demo"); sessionKind = s.kind;
+  await loadDevices();
+  showTab(location.hash === "#solar" || store("tab") === "solar" ? "solar" : "heater");
+  clearInterval(timer); let ticks = 0;
+  timer = setInterval(() => guard(async () => { await refresh(); if(++ticks % 2 === 0) await loadActivity(); if(!$("#tabSolar").classList.contains("hidden")) await loadSolar(); }), 30000);
+}
+$("#loginForm").addEventListener("submit", async e => {
+  e.preventDefault(); $("#loginBtn").disabled = true;
+  await guard(async () => { await api("/api/login", {method:"POST", body:{email:$("#email").value, password:$("#password").value, remember:$("#remember").checked}}); $("#password").value=""; await boot(); });
+  $("#loginBtn").disabled = false;
+});
+if(IOS) $("#demoBtn").remove();   // the iOS app has no demo button
+$("#demoBtn")?.addEventListener("click", () => guard(async () => { await api("/api/login", {method:"POST", body:{demo:true}}); await boot(); }));
+$("#logout").addEventListener("click", async () => { await api("/api/logout", {method:"POST"}); showLogin(); });
+
+/* ---------- heater picker ---------- */
+async function loadDevices(){
+  devices = await api("/api/devices");
+  const sel = $("#heater"); sel.replaceChildren();
+  devices.forEach(d => sel.append(el("option", {value:d.junction_id, textContent:`${d.name} - ${d.model}`})));
+  const saved = store("heater");
+  sel.value = devices.some(d => d.junction_id === saved) ? saved : (devices[0] && devices[0].junction_id);
+  if(!devices.length){ toast("No compatible water heaters found on this account", true); return; }
+  await selectHeater(sel.value);
+}
+$("#heater").addEventListener("change", e => { store("heater", e.target.value); guard(() => selectHeater(e.target.value)); });
+
+async function selectHeater(jid){
+  dev = devices.find(d => d.junction_id === jid);
+  selMode = null; spValue = null;
+  buildModes();
+  renderStatus();
+  await Promise.all([refresh(), loadEnergy(), loadActivity(), loadMonitor()]);
+}
+async function refresh(){
+  if(!dev) return;
+  const d = await api("/api/devices/" + encodeURIComponent(dev.junction_id));
+  const i = devices.findIndex(x => x.junction_id === d.junction_id); if(i >= 0) devices[i] = d;
+  dev = d; renderStatus();
+  if(d.status.mode_change_pending || d.status.setpoint_pending) setTimeout(() => guard(refresh), 4000);
+}
+
+/* ---------- status ---------- */
+function renderStatus(){
+  if(!dev) return;
+  const s = dev.status;
+  const on = $("#online"); on.textContent = s.is_online ? "Online" : "Offline"; on.className = "badge " + (s.is_online ? "ok" : "bad");
+  const hw = s.hot_water;
+  $("#hw").textContent = hw == null ? "-" : hw + "%";
+  $("#ringFg").setAttribute("stroke-dasharray", `${(hw || 0) / 100 * 389.6} 390`);
+  $("#info").textContent = [dev.install_location, "Serial " + dev.serial, "FW " + s.firmware_version].filter(Boolean).join("  |  ");
+  const r = $("#spRange"); r.max = s.setpoint_max; r.min = Math.min(95, s.setpoint);
+  if(spValue === null) spValue = s.setpoint;
+  r.value = spValue; $("#spVal").textContent = spValue + "°"; $("#spMax").textContent = s.setpoint_max;
+  $("#spApply").disabled = spValue === s.setpoint;
+  const w = $("#spWarn"), hot = spValue > SAFE_TEMP;
+  w.classList.toggle("hidden", !hot);
+  w.classList.toggle("hot", spValue >= 130);
+  w.textContent = spValue >= 130 ? `${spValue}° can cause serious scalding in seconds, especially for children and older adults.`
+                                 : `Above ${SAFE_TEMP}°: hot enough to scald with prolonged contact. ${SAFE_TEMP}° is the commonly recommended maximum.`;
+  $("#spPending").classList.toggle("hidden", !s.setpoint_pending);
+  $("#modePending").classList.toggle("hidden", !s.mode_change_pending);
+  if(dev.supports_hot_water_plus && s.hot_water_plus_level != null && selMode === null) $("#hwp").value = s.hot_water_plus_level;
+  markModes();
+}
+function setSp(v){ spValue = Math.max(+$("#spRange").min, Math.min(dev.status.setpoint_max, v)); renderStatus(); }
+$("#spDown").onclick = () => setSp(spValue - 1);
+$("#spUp").onclick = () => setSp(spValue + 1);
+$("#spRange").oninput = e => setSp(+e.target.value);
+function confirmHot(v){
+  $("#hotMsg").textContent = `You are about to set the water heater to ${v}°, above the recommended ${SAFE_TEMP}°. Water this hot can cause severe burns in seconds. Continue?`;
+  const dlg = $("#hotDlg");
+  return new Promise(res => {
+    const done = ok => { dlg.close(); $("#hotYes").onclick = $("#hotNo").onclick = dlg.oncancel = null; res(ok); };
+    $("#hotYes").onclick = () => done(true);
+    $("#hotNo").onclick = () => done(false);
+    dlg.oncancel = e => { e.preventDefault(); done(false); };
+    dlg.showModal();
+  });
+}
+$("#spApply").onclick = () => guard(async () => {
+  if(spValue > SAFE_TEMP && !(await confirmHot(spValue))) return;
+  const d = await api(`/api/devices/${encodeURIComponent(dev.junction_id)}/setpoint`, {method:"POST", body:{setpoint:spValue}});
+  dev = d; spValue = null; renderStatus(); toast("Setpoint sent"); setTimeout(() => guard(refresh), 3000);
+});
+
+/* ---------- modes ---------- */
+function buildModes(){
+  const box = $("#modes"); box.replaceChildren();
+  dev.supported_modes.forEach(m => box.append(el("button", {type:"button", dataset:{mode:m.mode}, textContent:label(m.mode), onclick:() => { selMode = m.mode; markModes(); }})));
+}
+function markModes(){
+  const cur = dev.status.mode, chosen = selMode || cur;
+  document.querySelectorAll("#modes button").forEach(b => {
+    b.classList.toggle("cur", b.dataset.mode === cur);
+    b.classList.toggle("sel", b.dataset.mode === chosen && chosen !== cur);
+  });
+  const info = dev.supported_modes.find(m => m.mode === chosen) || {};
+  $("#daysWrap").classList.toggle("hidden", !info.has_day_selection);
+  $("#hwpWrap").classList.toggle("hidden", !(dev.supports_hot_water_plus && info.supports_hot_water_plus));
+  const changed = chosen !== cur || (info.supports_hot_water_plus && dev.supports_hot_water_plus && +$("#hwp").value !== dev.status.hot_water_plus_level);
+  $("#modeApply").disabled = !changed;
+  $("#modeNote").textContent = info.has_day_selection ? "Vacation mode starts immediately for the number of days chosen." : "";
+}
+$("#hwp").onchange = markModes;
+$("#modeApply").onclick = () => guard(async () => {
+  const mode = selMode || dev.status.mode;
+  const info = dev.supported_modes.find(m => m.mode === mode);
+  const body = {mode};
+  if(info.has_day_selection) body.days = +$("#days").value;
+  if(dev.supports_hot_water_plus) body.hot_water_plus_level = info.supports_hot_water_plus ? +$("#hwp").value : 0;
+  dev = await api(`/api/devices/${encodeURIComponent(dev.junction_id)}/mode`, {method:"POST", body});
+  selMode = null; renderStatus(); toast("Mode sent"); setTimeout(() => guard(refresh), 3000);
+});
+
+/* ---------- energy ---------- */
+async function loadEnergy(){
+  const e = await api(`/api/devices/${encodeURIComponent(dev.junction_id)}/energy`);
+  window._energy = e; renderEnergy();
+}
+let chartHide = null;
+document.addEventListener("pointerdown", ev => { if(chartHide && !ev.target.closest(".chartbox")) chartHide(); });
+function renderEnergy(){
+  const e = window._energy; if(!e) return;
+  const h = e.history.slice(-30), sum = a => a.reduce((t, x) => t + x.kwh, 0);
+  const rate = +$("#rate").value || 0;
+  $("#e7").textContent = sum(h.slice(-7)).toFixed(1) + " kWh";
+  $("#e30").textContent = sum(h).toFixed(1) + " kWh";
+  $("#eLife").textContent = Math.round(e.lifetime_kwh).toLocaleString() + " kWh";
+  $("#eCost").textContent = "$" + (sum(h) * rate).toFixed(2);
+  const svg = $("#chart"); svg.replaceChildren();
+  const W = 600, H = 170, pad = 22, max = Math.max(1, ...h.map(x => x.kwh)) * 1.1, bw = W / Math.max(h.length, 1);
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  const NS = "http://www.w3.org/2000/svg";
+  const tip = $("#tip"), box = svg.parentElement;
+  svg.classList.remove("hov");
+  const bars = [];
+  h.forEach((x, i) => {
+    const bh = (H - pad) * x.kwh / max;
+    const r = document.createElementNS(NS, "rect");
+    r.setAttribute("class", "bar");
+    r.setAttribute("x", i * bw + 2); r.setAttribute("y", H - pad - bh); r.setAttribute("width", Math.max(1, bw - 4)); r.setAttribute("height", bh);
+    r.setAttribute("rx", 3); r.setAttribute("fill", "var(--acc)");
+    svg.append(r); bars.push(r);
+    if(i % Math.ceil(h.length / 6) === 0){
+      const l = document.createElementNS(NS, "text"); l.setAttribute("x", i * bw); l.setAttribute("y", H - 6);
+      l.setAttribute("fill", "var(--dim)"); l.setAttribute("font-size", "11"); l.setAttribute("pointer-events", "none"); l.textContent = String(x.date).slice(5, 10); svg.append(l);
+    }
+  });
+  // Hover (mouse) or touch/drag: show that day's kWh. Works from one handler so thin bars are easy to hit.
+  const hide = () => { svg.classList.remove("hov"); bars.forEach(b => b.classList.remove("on")); tip.classList.remove("show"); };
+  const show = i => {
+    const x = h[i], bh = (H - pad) * x.kwh / max;
+    bars.forEach((b, j) => b.classList.toggle("on", j === i));
+    svg.classList.add("hov");
+    const d = new Date(x.date + (String(x.date).length <= 10 ? "T00:00" : ""));
+    const when = isNaN(d) ? String(x.date) : d.toLocaleDateString([], {weekday:"short", month:"short", day:"numeric"});
+    tip.replaceChildren(el("b", {textContent:`${x.kwh} kWh`}), document.createTextNode(`${when}  |  $${(x.kwh * (+$("#rate").value || 0)).toFixed(2)}`));
+    const sr = svg.getBoundingClientRect(), br = box.getBoundingClientRect();
+    const cx = sr.left - br.left + (i + 0.5) * bw / W * sr.width;
+    const top = sr.top - br.top + (H - pad - bh) / H * sr.height - 6;
+    tip.style.left = Math.max(60, Math.min(br.width - 60, cx)) + "px"; tip.style.top = Math.max(34, top) + "px";
+    tip.classList.add("show");
+  };
+  const at = ev => { const r = svg.getBoundingClientRect(); return Math.max(0, Math.min(h.length - 1, Math.floor((ev.clientX - r.left) / r.width * h.length))); };
+  svg.onpointerdown = ev => { if(h.length) show(at(ev)); };
+  svg.onpointermove = ev => { if(h.length && (ev.pointerType !== "mouse" || ev.buttons === 0 || ev.buttons === 1)) show(at(ev)); };
+  svg.onpointerleave = ev => { if(ev.pointerType === "mouse") hide(); };
+  chartHide = hide;
+}
+$("#rate").addEventListener("input", () => { store("rate", $("#rate").value); renderEnergy(); });
+{ const r = store("rate"); if(r) $("#rate").value = r; }
+
+/* ---------- heating cycles: estimate gauge, charts, monitor settings ---------- */
+const NS = "http://www.w3.org/2000/svg";
+function svgEl(tag, attrs, text){
+  const n = document.createElementNS(NS, tag);
+  for(const k in attrs) n.setAttribute(k, attrs[k]);
+  if(text !== undefined) n.textContent = text;
+  return n;
+}
+const hr12 = h => (h % 12 || 12) + (h < 12 ? "a" : "p");
+const fmtH = h => h < 1 ? Math.round(h * 60) + " min" : h.toFixed(1) + " h";
+const fmtDur = sec => sec < 3600 ? Math.max(1, Math.round(sec / 60)) + " min" : (sec / 3600).toFixed(1) + " h";
+const clock = t => new Date(t * 1000).toLocaleTimeString([], {hour:"numeric", minute:"2-digit"});
+const KIND = {heat_pump:"heat pump", element:"element"};
+const kindColor = k => k === "element" ? "var(--sEl)" : "var(--sHp)";
+const chartW = svg => Math.max(280, Math.round(svg.getBoundingClientRect().width) || 600);  // draw at real size so text stays 11px
+const devPath = p => `/api/devices/${encodeURIComponent(dev.junction_id)}/${p}`;
+let sessionKind = null;
+
+function setTip(tip, title, lines){
+  tip.replaceChildren(el("b", {textContent:title}));
+  lines.forEach((l, i) => { if(i) tip.append(el("br")); tip.append(l); });
+}
+function placeTip(svg, tip, xView, yView, W){
+  const sr = svg.getBoundingClientRect(), br = svg.parentElement.getBoundingClientRect(), k = sr.width / W;
+  tip.style.left = Math.max(80, Math.min(br.width - 80, sr.left - br.left + xView * k)) + "px";
+  tip.style.top = Math.max(44, sr.top - br.top + yView * k - 8) + "px";
+  tip.classList.add("show");
+}
+/* Hover (mouse) or touch/drag anywhere on the chart; tapping outside a chart hides its tooltip. */
+const hiders = {};
+document.addEventListener("pointerdown", ev => { if(!ev.target.closest(".chartbox")) Object.values(hiders).forEach(f => f()); });
+function interact(svg, tip, W, show){
+  const hide = () => { svg.classList.remove("hov"); svg.querySelectorAll(".on").forEach(x => x.classList.remove("on")); svg.querySelector(".xh")?.remove(); tip.classList.remove("show"); };
+  hiders[svg.id] = hide;
+  const go = ev => { const r = svg.getBoundingClientRect(); show((ev.clientX - r.left) / r.width * W, hide); };
+  svg.onpointerdown = go;
+  svg.onpointermove = ev => { if(ev.pointerType !== "mouse" || ev.buttons <= 1) go(ev); };
+  svg.onpointerleave = ev => { if(ev.pointerType === "mouse") hide(); };
+  hide();
+}
+
+/* Stacked bars. bars: [{parts: [{v, color}] | null, tip: [title, ...lines] | null}] */
+function barChart(svg, tip, bars, {ymax, xTicks, yTicks, line}){
+  const W = chartW(svg), H = 190, L = 38, B = 22, T = 8, pw = W - L - 4, ph = H - B - T, bw = pw / bars.length;
+  svg.replaceChildren(); svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  const y = v => T + ph - ph * Math.min(v, ymax) / ymax;
+  yTicks.forEach(t => {
+    svg.append(svgEl("line", {x1:L, x2:W - 4, y1:y(t.v), y2:y(t.v), stroke:"var(--line)"}));
+    svg.append(svgEl("text", {x:L - 6, y:y(t.v) + 4, "text-anchor":"end", fill:"var(--dim)", "font-size":11}, t.text));
+  });
+  xTicks.forEach(t => svg.append(svgEl("text", {x:L + (t.i + .5) * bw, y:H - 6, "text-anchor":"middle", fill:"var(--dim)", "font-size":11}, t.text)));
+  const groups = bars.map((b, i) => {
+    const g = svgEl("g", {class:"bar"}); let top = 0, n = 0;
+    (b.parts || []).forEach(p => {
+      if(!(p.v > 0)) return;
+      const y0 = y(top), y1 = y(top + p.v); top += p.v;
+      g.append(svgEl("rect", {x:L + i * bw + 1.5, y:y1, width:Math.max(1, bw - 3), height:Math.max(1, y0 - y1 - (n++ ? 2 : 0)), rx:2, fill:p.color}));
+    });
+    svg.append(g); return {g, top};
+  });
+  if(line){
+    svg.append(svgEl("polyline", {points:line.map((v, i) => `${L + (i + .5) * bw},${y(v)}`).join(" "), fill:"none", stroke:"var(--ink)",
+      "stroke-width":1.5, "stroke-dasharray":"4 3", "stroke-linejoin":"round", "pointer-events":"none"}));
+  }
+  interact(svg, tip, W, (xv, hide) => {
+    const i = Math.floor((xv - L) / bw), b = bars[i];
+    if(!b || !b.tip) return hide();
+    svg.classList.add("hov"); groups.forEach((g, j) => g.g.classList.toggle("on", j === i));
+    setTip(tip, b.tip[0], b.tip.slice(1));
+    placeTip(svg, tip, L + (i + .5) * bw, y(Math.max(groups[i].top, line ? line[i] : 0)), W);
+  });
+}
+
+/* 24 h: heater's reading and estimate as lines on one 0-100% axis, heating cycles as a strip underneath. */
+function cmpChart(a){
+  const svg = $("#cmpChart"), tip = $("#cmpTip"), d = a.day;
+  const W = chartW(svg), H = 232, L = 38, R = 6, T = 8, PH = 150, SY = T + PH + 14, SH = 18, pw = W - L - R;
+  svg.replaceChildren(); svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  const x = t => L + (t - d.start) / (d.end - d.start) * pw, y = v => T + PH - PH * v / 100;
+  [0, 50, 100].forEach(v => {
+    svg.append(svgEl("line", {x1:L, x2:W - R, y1:y(v), y2:y(v), stroke:"var(--line)"}));
+    svg.append(svgEl("text", {x:L - 6, y:y(v) + 4, "text-anchor":"end", fill:"var(--dim)", "font-size":11}, v + "%"));
+  });
+  const h0 = new Date(d.start * 1000); h0.setMinutes(0, 0, 0);
+  for(let t = h0.getTime() / 1000 + 3600; t < d.end; t += 3600){
+    const hh = new Date(t * 1000).getHours();
+    if(hh % 3 === 0) svg.append(svgEl("text", {x:x(t), y:H - 6, "text-anchor":"middle", fill:"var(--dim)", "font-size":11}, hr12(hh)));
+  }
+  svg.append(svgEl("text", {x:L - 6, y:SY + 13, "text-anchor":"end", fill:"var(--dim)", "font-size":11}, "on"));
+  svg.append(svgEl("rect", {x:L, y:SY, width:pw, height:SH, rx:4, fill:"var(--fill)"}));
+  d.cycles.forEach(c => svg.append(svgEl("rect", {x:x(c.s), y:SY, width:Math.max(2, x(c.e) - x(c.s)), height:SH, rx:2, fill:kindColor(c.kind)})));
+  const series = (key, color) => {
+    let pts = [], prev = null;
+    const flush = () => {
+      if(pts.length > 1) svg.append(svgEl("polyline", {points:pts.join(" "), fill:"none", stroke:color, "stroke-width":2, "stroke-linejoin":"round", "stroke-linecap":"round"}));
+      pts = [];
+    };
+    d.samples.forEach(s => {
+      if(s[key] == null || (prev !== null && s.t - prev > 900)) flush();   // gap: monitoring was off
+      if(s[key] != null) pts.push(`${x(s.t).toFixed(1)},${y(s[key]).toFixed(1)}`);
+      prev = s.t;
+    });
+    flush();
+  };
+  series("hw", "var(--sHw)"); series("est", "var(--sEst)");
+  interact(svg, tip, W, (xv, hide) => {
+    if(!d.samples.length) return hide();
+    const t = d.start + (xv - L) / pw * (d.end - d.start);
+    const s = d.samples.reduce((b, s) => Math.abs(s.t - t) < Math.abs(b.t - t) ? s : b);
+    const c = d.cycles.find(c => t >= c.s && t <= c.e);
+    svg.querySelector(".xh")?.remove();
+    const g = svgEl("g", {class:"xh", "pointer-events":"none"});
+    g.append(svgEl("line", {x1:x(s.t), x2:x(s.t), y1:T, y2:SY + SH, stroke:"var(--dim)", "stroke-dasharray":"3 3"}));
+    [["hw", "var(--sHw)"], ["est", "var(--sEst)"]].forEach(([k, col]) => {
+      if(s[k] != null) g.append(svgEl("circle", {cx:x(s.t), cy:y(s[k]), r:4.5, fill:col, stroke:"var(--bg2)", "stroke-width":2}));
+    });
+    svg.append(g);
+    setTip(tip, clock(s.t), [`Heater's reading ${s.hw ?? "-"}%  |  Estimate ${s.est ?? "-"}%`,
+      c ? `Heating on ${KIND[c.kind]}, ${clock(c.start)} - ${c.open ? "now" : clock(c.e)}` : "Not heating"]);
+    placeTip(svg, tip, x(s.t), y(Math.max(s.hw ?? 0, s.est ?? 0)), W);
+  });
+  $("#cmpNote").textContent = a.has_data
+    ? "The estimate assumes each heating cycle starts with the tank short by a typical cycle's worth of heat (learned from past cycles), climbs back as the heater runs, and is full when it stops. Big gaps between the two lines show where the heater's own reading is off."
+    : "No data yet. While signed in, the server records the heater every 5 minutes (a power meter every 30 seconds); the charts fill in as it collects.";
+}
+
+function dayChart(a){
+  const nowH = new Date().getHours();
+  barChart($("#dayChart"), $("#dayTip"), a.today.map((m, h) => h > nowH ? {parts:null, tip:null} : {
+      parts:[{v:m.heat_pump, color:"var(--sHp)"}, {v:m.element, color:"var(--sEl)"}],
+      tip:[`${Math.round(m.heat_pump + m.element)} min heating`, `${hr12(h)} - ${hr12((h + 1) % 24)}`,
+           ...(m.element ? [`Element ${Math.round(m.element)} min`] : []), ...(a.typical ? [`Typical ${Math.round(a.typical[h])} min`] : [])]}),
+    {ymax:60, xTicks:[0, 3, 6, 9, 12, 15, 18, 21].map(h => ({i:h, text:hr12(h)})),
+     yTicks:[{v:0, text:"0"}, {v:30, text:"30m"}, {v:60, text:"60m"}], line:a.typical});
+  $("#typLegend").classList.toggle("hidden", !a.typical);
+}
+
+function trendChart(a){
+  const days = a.daily, have = days.filter(d => d.cycles != null);
+  const tot = k => have.reduce((t, d) => t + d[k], 0);
+  const hours = tot("heat_pump") + tot("element"), cyc = tot("cycles");
+  $("#cyDay").textContent = have.length ? (cyc / have.length).toFixed(1) : "-";
+  $("#cyLen").textContent = cyc ? fmtH(hours / cyc) : "-";
+  $("#cyHours").textContent = have.length ? fmtH(hours / have.length) : "-";
+  $("#cyEl").textContent = hours ? Math.round(100 * tot("element") / hours) + "%" : "-";
+  const top = Math.max(0, ...have.map(d => d.heat_pump + d.element)), ymax = top <= 1 ? 1 : Math.ceil(top / 2) * 2;
+  barChart($("#trendChart"), $("#trendTip"), days.map(d => {
+      const when = new Date(d.date + "T00:00").toLocaleDateString([], {weekday:"short", month:"short", day:"numeric"});
+      return d.cycles == null ? {parts:null, tip:["No data", when]} : {
+        parts:[{v:d.heat_pump, color:"var(--sHp)"}, {v:d.element, color:"var(--sEl)"}],
+        tip:[fmtH(d.heat_pump + d.element) + " heating", when, `${d.cycles} cycle${d.cycles === 1 ? "" : "s"}  |  ${d.kwh.toFixed(1)} kWh`,
+             ...(d.element ? [`Element ${fmtH(d.element)}`] : [])]};
+    }),
+    {ymax, xTicks:days.map((d, i) => ({i, text:d.date.slice(5).replace("-", "/")})).filter((_, i) => i % 6 === 0),
+     yTicks:[0, ymax / 2, ymax].map(v => ({v, text:+v.toFixed(1) + "h"}))});
+}
+
+function renderEstimate(e){
+  const lvl = e.level;
+  $("#estVal").textContent = lvl == null ? "-" : lvl + "%";
+  $("#estRing").setAttribute("stroke-dasharray", `${(lvl || 0) / 100 * 389.6} 390`);
+  $("#estBadge").classList.toggle("hidden", !e.heating);
+  $("#estInfo").textContent = lvl == null ? "Waiting for the first readings"
+    : e.heating ? `Heating on ${KIND[e.kind]}, ${e.watts.toLocaleString()} W, for ${fmtDur(Date.now() / 1000 - e.since)}`
+    : e.since ? `Idle since ${clock(e.since)}` : "Idle";
+  const src = {meter: sessionKind === "demo" ? "Simulated power meter (demo)." : "From the power meter.",
+               cloud: "From the iCOMM kWh counter, which is coarse. Add a power meter in Cycle monitor settings for accurate cycles.",
+               none: "Monitoring starts once the server is signed in to iCOMM."}[e.source] || "";
+  $("#estSrc").textContent = src + (e.cap_kwh ? ` The tank holds about ${e.cap_kwh} kWh of heat; a typical cycle replaces ${e.learned_kwh} kWh.` : "");
+}
+
+async function loadActivity(){
+  if(!dev) return;
+  const cards = document.querySelectorAll(".act, #estCard");
+  let a;
+  try{ a = await api(devPath("activity")); }
+  catch(e){ if(e.status === 401) throw e; cards.forEach(c => c.classList.add("hidden")); return; }  // e.g. the phone apps have no monitor
+  cards.forEach(c => c.classList.remove("hidden"));
+  lastActivity = a; renderEstimate(a.estimate); cmpChart(a); dayChart(a); trendChart(a);
+}
+let lastActivity = null, resizeT;
+window.addEventListener("resize", () => { clearTimeout(resizeT); resizeT = setTimeout(() => { if(lastActivity){ cmpChart(lastActivity); dayChart(lastActivity); trendChart(lastActivity); } }, 150); });
+
+/* ---------- monitor settings ---------- */
+async function loadMonitor(){
+  let c;
+  try{ c = await api(devPath("monitor")); }catch{ return; }
+  $("#cfUrl").value = c.power_url; $("#cfPath").value = c.power_path; $("#cfUnit").value = c.power_unit;
+  $("#cfToken").value = ""; $("#cfToken").placeholder = c.has_token ? "saved (leave empty to keep)" : "none";
+  $("#cfGal").value = c.tank_gal; $("#cfInlet").value = c.inlet_f; $("#cfCop").value = c.cop;
+  $("#cfOn").value = c.on_w; $("#cfEl").value = c.element_w; $("#cfMsg").textContent = "";
+  $("#cfSource").textContent = c.power_url ? "Using power meter" : "Using iCOMM kWh counter";
+  $("#cfSource").className = "badge " + (c.power_url ? "ok" : "blue");
+}
+function cfgBody(){
+  const n = (id, dflt) => $(id).value === "" ? dflt : +$(id).value;
+  return {power_url:$("#cfUrl").value, power_path:$("#cfPath").value, power_unit:$("#cfUnit").value, power_token:$("#cfToken").value || null,
+          tank_gal:n("#cfGal", null), inlet_f:n("#cfInlet", 55), cop:n("#cfCop", 3), on_w:n("#cfOn", 100), element_w:n("#cfEl", 2000)};
+}
+$("#cfTest").onclick = () => guard(async () => {
+  $("#cfMsg").textContent = "Reading...";
+  try{ const r = await api(devPath("monitor/test"), {method:"POST", body:cfgBody()}); $("#cfMsg").textContent = `Reading: ${r.watts.toLocaleString()} W`; }
+  catch(e){ $("#cfMsg").textContent = ""; throw e; }
+});
+$("#cfSave").onclick = () => guard(async () => {
+  await api(devPath("monitor"), {method:"POST", body:cfgBody()});
+  await loadMonitor(); toast("Monitor settings saved"); await loadActivity();
+});
+
+/* ---------- solar tab: EG4 inverter + dump load ---------- */
+let solar = null, solFormLoaded = false;
+const kW = w => w == null ? "-" : Math.abs(w) >= 1000 ? (w / 1000).toFixed(1) + " kW" : Math.round(w) + " W";
+const ago = t => { const s = Math.max(0, Math.round(Date.now() / 1000 - t)); return s < 90 ? `${s} s ago` : `${Math.round(s / 60)} min ago`; };
+
+function showTab(t){
+  document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === t));
+  $("#tabHeater").classList.toggle("hidden", t !== "heater");
+  $("#tabSolar").classList.toggle("hidden", t !== "solar");
+  store("tab", t);
+  if(t === "solar") guard(loadSolar);
+  else if(lastActivity){ cmpChart(lastActivity); dayChart(lastActivity); trendChart(lastActivity); }  // redraw at the visible width
+}
+document.querySelectorAll("#tabs button").forEach(b => b.onclick = () => showTab(b.dataset.tab));
+
+async function loadSolar(){
+  try{ solar = await api("/api/solar"); }
+  catch(e){ if(e.status === 404){ $("#tabs").classList.add("hidden"); showTab("heater"); return; } throw e; }  // phone apps have no solar API
+  renderSolar();
+}
+
+/* 24 h time chart on one axis: lines per series, optional dashed reference lines and an on/off strip. */
+function timeChart(svg, tip, rows, {series, ymax, yfmt, refs = [], strip}){
+  const W = chartW(svg), H = strip ? 222 : 196, L = 46, R = 6, T = 8, PH = 150, SY = T + PH + 14, SH = 14, pw = W - L - R;
+  const end = Date.now() / 1000, start = end - 86400;
+  svg.replaceChildren(); svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  const x = t => L + (t - start) / 86400 * pw, y = v => T + PH - PH * Math.max(0, Math.min(v, ymax)) / ymax;
+  [0, ymax / 2, ymax].forEach(v => {
+    svg.append(svgEl("line", {x1:L, x2:W - R, y1:y(v), y2:y(v), stroke:"var(--line)"}));
+    svg.append(svgEl("text", {x:L - 6, y:y(v) + 4, "text-anchor":"end", fill:"var(--dim)", "font-size":11}, yfmt(v)));
+  });
+  const h0 = new Date(start * 1000); h0.setMinutes(0, 0, 0);
+  for(let t = h0.getTime() / 1000 + 3600; t < end; t += 3600){
+    const hh = new Date(t * 1000).getHours();
+    if(hh % 3 === 0) svg.append(svgEl("text", {x:x(t), y:H - 6, "text-anchor":"middle", fill:"var(--dim)", "font-size":11}, hr12(hh)));
+  }
+  refs.forEach((r, i) => {
+    svg.append(svgEl("line", {x1:L, x2:W - R, y1:y(r.v), y2:y(r.v), stroke:"var(--dim)", "stroke-dasharray":"4 3"}));
+    svg.append(svgEl("text", {x:L + 6 + i * 70, y:y(r.v) - 4, fill:"var(--dim)", "font-size":10.5}, r.label));
+  });
+  if(strip){
+    svg.append(svgEl("text", {x:L - 6, y:SY + 11, "text-anchor":"end", fill:"var(--dim)", "font-size":11}, strip.short));
+    svg.append(svgEl("rect", {x:L, y:SY, width:pw, height:SH, rx:4, fill:"var(--fill)"}));
+    let runStart = null;
+    rows.forEach((r, i) => {
+      const next = rows[i + 1];
+      if(r[strip.key] && runStart === null) runStart = r.t;
+      if(runStart !== null && (!next || !next[strip.key] || next.t - r.t > 900)){
+        const stop = next && next.t - r.t <= 900 ? next.t : r.t + 60;
+        svg.append(svgEl("rect", {x:x(runStart), y:SY, width:Math.max(2, x(stop) - x(runStart)), height:SH, rx:2, fill:strip.color}));
+        runStart = null;
+      }
+    });
+  }
+  series.forEach(s => {
+    let pts = [], prev = null;
+    const flush = () => { if(pts.length > 1) svg.append(svgEl("polyline", {points:pts.join(" "), fill:"none", stroke:s.color, "stroke-width":2, "stroke-linejoin":"round", "stroke-linecap":"round"})); pts = []; };
+    rows.forEach(r => {
+      if(r[s.key] == null || (prev !== null && r.t - prev > 900)) flush();
+      if(r[s.key] != null) pts.push(`${x(r.t).toFixed(1)},${y(r[s.key]).toFixed(1)}`);
+      prev = r.t;
+    });
+    flush();
+  });
+  interact(svg, tip, W, (xv, hide) => {
+    if(!rows.length) return hide();
+    const t = start + (xv - L) / pw * 86400;
+    const r = rows.reduce((b, r) => Math.abs(r.t - t) < Math.abs(b.t - t) ? r : b);
+    svg.querySelector(".xh")?.remove();
+    const g = svgEl("g", {class:"xh", "pointer-events":"none"});
+    g.append(svgEl("line", {x1:x(r.t), x2:x(r.t), y1:T, y2:strip ? SY + SH : T + PH, stroke:"var(--dim)", "stroke-dasharray":"3 3"}));
+    series.forEach(s => { if(r[s.key] != null) g.append(svgEl("circle", {cx:x(r.t), cy:y(r[s.key]), r:4.5, fill:s.color, stroke:"var(--bg2)", "stroke-width":2})); });
+    svg.append(g);
+    setTip(tip, clock(r.t), [...series.map(s => `${s.label} ${s.fmt(r[s.key])}`), ...(strip && r[strip.key] ? [strip.label] : [])]);
+    placeTip(svg, tip, x(r.t), y(Math.max(...series.map(s => r[s.key] ?? 0))), W);
+  });
+}
+
+function solarCharts(){
+  const p = solar, s = p.settings, rows = p.day;
+  const peak = Math.max(s.rated_w, ...rows.map(r => Math.max(r.pv || 0, r.inv || 0)));
+  const ymax = Math.ceil(peak / 2000) * 2000;
+  timeChart($("#solChart"), $("#solTip"), rows, {
+    series:[{key:"pv", color:"var(--sSun)", label:"Solar", fmt:kW}, {key:"inv", color:"var(--sHw)", label:"Inverter output", fmt:kW}],
+    ymax, yfmt:v => v ? (v / 1000) + " kW" : "0", refs:[{v:p.limit_w, label:`cut-off ${kW(p.limit_w)}`}],
+    strip:{key:"dump", color:"var(--sEst)", label:"Dumping into the water heater", short:"dump"}});
+  timeChart($("#socChart"), $("#socTip"), rows, {
+    series:[{key:"soc", color:"var(--sHp)", label:"Battery", fmt:v => v == null ? "-" : v + "%"}],
+    ymax:100, yfmt:v => v + "%", refs:[{v:s.start_soc, label:`start ${s.start_soc}%`}, {v:s.stop_soc, label:`stop ${s.stop_soc}%`}]});
+}
+
+function renderSolar(){
+  const p = solar, live = p.live, c = p.control, s = p.settings;
+  $("#sPv").textContent = live ? kW(live.pv) : "-";
+  $("#sSoc").textContent = live && live.soc != null ? live.soc + "%" : "-";
+  $("#sBat").textContent = !live ? "" : live.charge > 0 ? `Charging ${kW(live.charge)}` : live.discharge > 0 ? `Discharging ${kW(live.discharge)}` : "Idle";
+  $("#sInv").textContent = live ? kW(live.inv) : "-";
+  const pct = live ? 100 * live.inv / s.rated_w : 0, hot = live && live.inv >= p.limit_w;
+  $("#sMeterFill").style.width = Math.min(100, pct) + "%";
+  $("#sMeterFill").classList.toggle("hot", !!hot);
+  $("#sMeterLimit").style.left = `calc(${100 * p.limit_w / s.rated_w}% - 1px)`;
+  $("#sMeter").setAttribute("aria-label", `Inverter at ${Math.round(pct)}% of its rating`);
+  $("#sInvSub").textContent = live ? `${Math.round(pct)}% of ${kW(s.rated_w)}${hot ? " - at the cut-off" : ""}  |  cut-off ${kW(p.limit_w)}` : "";
+  $("#sGrid").textContent = !live ? "-" : live.grid_in > 0 ? `Using ${kW(live.grid_in)} from the grid` : live.grid_out > 0 ? `Sending ${kW(live.grid_out)} to the grid` : "Not using the grid";
+  $("#solUpdated").textContent = live ? `${live.status ? live.status + ", " : ""}updated ${ago(live.t)}` : "";
+  $("#solErr").textContent = p.error || (p.configured ? "" : "Connect your EG4 Monitor account under Solar settings below to start.");
+  if(!p.configured && !solFormLoaded) $("#solCfg").open = true;
+
+  $("#dumpOn").checked = c.enabled;
+  document.querySelectorAll("#dumpModes button").forEach(b => b.classList.toggle("cur", b.dataset.m === c.dump_mode));
+  const sel = $("#dumpHeater");
+  if(sel.options.length !== devices.length){
+    sel.replaceChildren(...devices.map(d => el("option", {value:d.junction_id, textContent:d.name})));
+  }
+  sel.value = c.heater || (devices[0] && devices[0].junction_id) || "";
+  $("#dumpHeaterWrap").classList.toggle("hidden", devices.length < 2);
+  const [bt, bc] = {dumping:["Dumping", "ok"], ready:["Ready", "blue"], waiting:["Waiting", ""], paused:["Paused", "warn"], off:["Off", ""]}[c.state] || ["", ""];
+  $("#dumpBadge").textContent = bt; $("#dumpBadge").className = "badge " + bc;
+  $("#dumpStatus").textContent = c.text;
+  $("#boostOn").checked = c.boost;
+  if(document.activeElement !== $("#boostSp")) $("#boostSp").value = c.boost_setpoint;
+  $("#boostRow").style.opacity = c.boost ? 1 : .5;
+  const bw = $("#boostWarn");
+  bw.classList.toggle("hidden", !(c.boost && c.boost_setpoint > SAFE_TEMP));
+  bw.classList.toggle("hot", c.boost_setpoint >= 130);
+  bw.textContent = `${c.boost_setpoint}° can scald. Only use a boost above ${SAFE_TEMP}° if a thermostatic mixing valve at the heater tempers the water going to the taps.`;
+  $("#dumpNote").textContent = c.dump_mode === "electric"
+    ? "Electric uses the elements (about 4,500 W): it soaks up the most solar, but only starts when the inverter has that much room under the cut-off."
+    : "Hybrid mostly uses the heat pump (a few hundred watts) and the element only for big demands, so it soaks up less solar but rarely nears the inverter limit.";
+  $("#dumpEvents").replaceChildren(...p.events.map(e => el("li", {}, el("time", {textContent:new Date(e.t * 1000).toLocaleString([], {weekday:"short", hour:"numeric", minute:"2-digit"})}), e.msg)));
+  solarCharts();
+  if(!solFormLoaded) fillSolarForm(s);
+}
+
+function fillSolarForm(s){
+  solFormLoaded = true;
+  $("#sfAcct").value = s.eg4_account; $("#sfPass").value = ""; $("#sfPass").placeholder = s.has_password ? "saved (leave empty to keep)" : "";
+  const ser = $("#sfSerial");
+  if(s.serial && ![...ser.options].some(o => o.value === s.serial)) ser.append(el("option", {value:s.serial, textContent:s.serial}));
+  ser.value = s.serial;
+  $("#sfStart").value = s.start_soc; $("#sfStop").value = s.stop_soc; $("#sfPv").value = s.min_pv; $("#sfDis").value = s.max_discharge;
+  $("#sfRated").value = s.rated_w; $("#sfLimit").value = s.limit_pct; $("#sfAction").value = s.overload_action;
+  $("#sfPause").value = s.pause_min; $("#sfSwitch").value = s.min_switch_min;
+}
+function solarBody(){
+  return {eg4_account:$("#sfAcct").value, eg4_password:$("#sfPass").value || null, serial:$("#sfSerial").value,
+          start_soc:+$("#sfStart").value, stop_soc:+$("#sfStop").value, min_pv:+$("#sfPv").value, max_discharge:+$("#sfDis").value,
+          rated_w:+$("#sfRated").value, limit_pct:+$("#sfLimit").value, overload_action:$("#sfAction").value,
+          pause_min:+$("#sfPause").value, min_switch_min:+$("#sfSwitch").value};
+}
+async function solarControl(body, msg){
+  try{ solar = await api("/api/solar/control", {method:"POST", body}); toast(msg); }
+  finally{ if(solar) renderSolar(); }
+}
+$("#dumpOn").onchange = () => guard(() => solarControl({enabled:$("#dumpOn").checked}, $("#dumpOn").checked ? "Dump load on" : "Dump load off"));
+document.querySelectorAll("#dumpModes button").forEach(b => b.onclick = () => guard(() => solarControl({dump_mode:b.dataset.m}, `Dump load will use ${b.textContent} mode`)));
+async function setBoost(on, sp){
+  if(on && sp > SAFE_TEMP && !(await confirmHot(sp))){ renderSolar(); return; }
+  await solarControl({boost:on, boost_setpoint:sp}, on ? `Setpoint boost to ${sp}° while dumping` : "Setpoint boost off");
+}
+$("#boostOn").onchange = () => guard(() => setBoost($("#boostOn").checked, +$("#boostSp").value));
+$("#boostSp").onchange = () => guard(() => setBoost(solar.control.boost, Math.max(100, Math.min(140, +$("#boostSp").value || 130))));
+$("#dumpHeater").onchange = e => guard(() => solarControl({heater:e.target.value}, "Dump load water heater changed"));
+$("#sfConnect").onclick = () => guard(async () => {
+  $("#sfMsg").textContent = "Connecting...";
+  try{
+    const r = await api("/api/solar/connect", {method:"POST", body:solarBody()});
+    const ser = $("#sfSerial"), keep = ser.value;
+    ser.replaceChildren(el("option", {value:"", textContent:"First on the account"}),
+      ...r.inverters.map(i => el("option", {value:i.serial, textContent:`${i.serial}${i.plant ? " - " + i.plant : ""}`})));
+    ser.value = r.inverters.some(i => i.serial === keep) ? keep : (r.inverters[0] ? r.inverters[0].serial : "");
+    $("#sfMsg").textContent = r.inverters.length ? `Connected: found ${r.inverters.length} inverter${r.inverters.length > 1 ? "s" : ""}. Press Save.` : "Connected, but no inverter is on this account.";
+  }catch(e){ $("#sfMsg").textContent = ""; throw e; }
+});
+$("#sfSave").onclick = () => guard(async () => {
+  solar = await api("/api/solar/settings", {method:"POST", body:solarBody()});
+  solFormLoaded = false; renderSolar(); $("#sfMsg").textContent = ""; toast("Solar settings saved");
+});
+window.addEventListener("resize", () => { clearTimeout(window._solRT); window._solRT = setTimeout(() => { if(solar && !$("#tabSolar").classList.contains("hidden")) solarCharts(); }, 150); });
+
+guard(boot);
+</script>
+</body>
+</html>

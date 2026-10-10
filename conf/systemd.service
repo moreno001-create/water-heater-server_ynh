@@ -1,0 +1,36 @@
+[Unit]
+Description=A. O. Smith water heater dashboard
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=__APP__
+Group=__APP__
+WorkingDirectory=__INSTALL_DIR__/
+Environment=WH_HOST=127.0.0.1
+Environment=WH_PORT=__PORT__
+Environment=WH_DATA_DIR=__DATA_DIR__
+ExecStart=__INSTALL_DIR__/venv/bin/python __INSTALL_DIR__/server.py
+StandardOutput=append:/var/log/__APP__/__APP__.log
+StandardError=inherit
+Restart=on-failure
+RestartSec=5
+
+# Sandboxing
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=full
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictRealtime=yes
+RestrictNamespaces=yes
+LockPersonality=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+CapabilityBoundingSet=
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=multi-user.target

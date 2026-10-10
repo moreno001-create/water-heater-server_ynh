@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+credentials.json
+samples.jsonl
+cycles.jsonl
+monitor-settings.json
+solar.jsonl
+solar-settings.json
+solar-state.json
