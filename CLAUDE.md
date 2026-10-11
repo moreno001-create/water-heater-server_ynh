@@ -3,6 +3,15 @@
 Read this first, then `README.md` (user-facing: what it does, how to install). This file records how the code is put together,
 why it was built this way, what's verified and what's still open.
 
+> **Latest status (2026-10-10):**
+> - **Installed and working** on the owner's YunoHost server, through the web admin from the public copy `water-heater-server_ynh`.
+> - **The active work is in the sibling repo `moreno001-create/eg4-dashboard`.** Read the "START HERE" section of its `CLAUDE.md`: restyle it to look like the
+>   owner's **Voltline** iPad app (the source is probably on the Mac), plus the pending decisions.
+> - **Solar server source (2026-10-10, built on the Mac):** the dump load now reads the inverter from eg4-dashboard's `/api/live` first. eg4-dashboard reads the
+>   Wi-Fi dongle directly every 5 s. EG4 Monitor is the fallback. See "Where readings come from" below.
+>   - Needs eg4-dashboard **installed on the same YunoHost server** (then the address is `http://127.0.0.1:8766`). Until then, leave the address empty.
+> - **Still open here:** a light/dark/auto theme switch like the one in eg4-dashboard (offered, not answered yet).
+
 ## What this is
 A self-hosted dashboard for the owner's **A. O. Smith iCOMM heat-pump water heater** and **EG4 6000XP** solar inverter,
 packaged as a **YunoHost** app (the owner's home server). Single household, one iCOMM account, one EG4 account.
@@ -12,7 +21,7 @@ the same `index.html`) and became its own repo.
 The owner's setup and choices (from conversation):
 - The water heater is wired to the **6000XP's output**, so the ~4.5 kW element counts against the inverter's 6 kW rating.
 - **No power meter yet** on the heater circuit (may add one, e.g. a Shelly EM). The cycle monitor falls back to the iCOMM kWh counter until then.
-- Reads the inverter through the **EG4 Monitor cloud** (Wi-Fi dongle -> monitor.eg4electronics.com).
+- Reads the inverter from the owner's **solar server** (eg4-dashboard, which reads the Wi-Fi dongle on the home network), falling back to the **EG4 Monitor cloud**.
 - First chose mode-only dumping, then asked for the **optional setpoint boost**, which is now built (off by default).
 
 ## Layout
@@ -65,6 +74,22 @@ The owner's setup and choices (from conversation):
   - Two bugs here were caught by tests: the code read the "previous" value after the switch had mutated the same dict. **Always capture before calling a setter.**
 - Hot Water+: `solar_set_mode` in server.py passes the level only when the target mode supports it. py-aosmith raises otherwise.
 
+### Where readings come from (added 2026-10-10)
+- **Solar server first.** Setting `solar_url` (Solar settings → "Solar server address", e.g. `http://127.0.0.1:8766`) makes `Solar.read()` fetch
+  `GET {solar_url}/api/live` from eg4-dashboard. That gives the latest reading with `source` = local (Wi-Fi dongle) / cloud, plus `age` and `stale`.
+  - On YunoHost the eg4solar service listens on 127.0.0.1, so this goes app to app, without the YunoHost login.
+  - Only eg4-dashboard talks to the dongle: it allows a single local client, which is why the water heater doesn't connect to it itself.
+- **Fallback:** if the solar server doesn't answer, answers non-200, or its reading is stale or older than 180 s, the EG4 cloud login (if saved) is read instead.
+  - `server_error` says why, and the Solar tab shows it.
+  - It goes back to the solar server as soon as it answers.
+- **Timing:**
+  - While the solar server has live Wi-Fi readings (`fast`), `Solar` polls every 5 s (`FAST_SECS`).
+  - Only `guard()` runs on the in-between readings: the inverter cut-off, so a surge stops dumping within seconds.
+  - The full rules and the history row still run once a minute (`last_full`), so the start/stop streaks keep their meaning (3 / 2 minutes).
+- **Note on the 6000XP:** `inv` (= max(pinv, peps)) reads **0 while the inverter passes grid power through** (seen live 2026-10-10: home 1.5 kW, inv 0).
+  The cut-off rule was left as it was. It uses the same figure as before, so it behaves the same from either source.
+- Test: `tests/test_source.py`.
+
 ## Status
 - **Verified locally:** all `tests/` scripts pass; demo mode renders in Edge (light and dark, desktop), screenshots checked.
 - **Not yet verified:**
@@ -76,12 +101,7 @@ The owner's setup and choices (from conversation):
   - Phone-width layout of the new cards (the headless screenshots at 390 px were unreliable).
 
 ## Open ideas / next steps (owner's wishes first)
-1. **Direct local connection to the 6000XP** (owner asked, parked "for later" because they were away from home). Two ways:
-   - The Wi-Fi dongle's **TCP port 8000** (LuxPower protocol: an 18-byte header wrapping Modbus RTU; spec at github.com/celsworth/lxp-bridge/wiki/TCP-Packet-Spec,
-     reference implementation in pylxpweb `transports/dongle.py`). Only **one** local client at a time, and newer dongle firmware may block port 8000.
-     The owner should first run `Test-NetConnection <dongle-ip> -Port 8000`.
-   - An **RS485-to-Ethernet/Wi-Fi adapter** on the inverter's RS485 port (Modbus RTU over TCP).
-   - Either way: add a source choice in Solar settings, keep the cloud as fallback, poll every ~5 s. The main win is a faster inverter cut-off.
+1. ~~Direct local connection to the 6000XP~~: done through eg4-dashboard (dongle port 8000 works). This app reads it via the solar server, above.
 2. A power meter on the heater circuit (the code supports it already; the owner just needs hardware).
 3. Possibly a 30-day solar/dump history chart (hours dumped per day, estimated kWh absorbed).
 

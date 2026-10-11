@@ -15,6 +15,7 @@ import json
 import logging
 import os
 import random
+import re
 import threading
 import webbrowser
 from contextlib import asynccontextmanager
@@ -357,6 +358,7 @@ class SolarControlIn(BaseModel):
 
 
 class SolarIn(BaseModel):
+    solar_url: str = ""      # the solar server (eg4-dashboard), e.g. http://127.0.0.1:8766; empty = EG4 Monitor only
     eg4_account: str = ""
     eg4_password: str | None = None  # None keeps the saved password
     serial: str = ""
@@ -373,6 +375,9 @@ class SolarIn(BaseModel):
     def checked(self):
         c = self.model_dump()
         c["eg4_account"], c["serial"] = c["eg4_account"].strip(), c["serial"].strip()
+        c["solar_url"] = c["solar_url"].strip().rstrip("/")
+        if c["solar_url"] and not re.fullmatch(r"https?://[^\s/]+(/[^\s]*)?", c["solar_url"]):
+            raise HTTPException(400, "The solar server address should look like http://127.0.0.1:8766")
         for k, lo, hi in (("start_soc", 50, 100), ("stop_soc", 10, 100), ("min_pv", 0, 30000), ("max_discharge", 0, 10000),
                           ("rated_w", 1000, 30000), ("limit_pct", 50, 100), ("pause_min", 1, 1440), ("min_switch_min", 1, 120)):
             if not lo <= c[k] <= hi:

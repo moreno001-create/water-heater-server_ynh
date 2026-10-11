@@ -101,8 +101,13 @@ History is kept for 60 days in `samples.jsonl` and `cycles.jsonl` (in `/home/yun
 `server.py` when run locally).
 
 ## Solar dump load (EG4 inverter)
-The Solar tab reads the inverter from the **EG4 Monitor cloud**, the same data the EG4 app shows (uploaded by the inverter's
-Wi-Fi dongle), about once a minute. Connect it under *Solar settings* with your EG4 Monitor email and password. The password
+The Solar tab reads the inverter from your **solar server** first: the EG4 solar dashboard (`eg4-dashboard`), which reads the
+inverter's Wi-Fi dongle on your home network every few seconds. Install it on the same YunoHost server and put
+`http://127.0.0.1:8766` in *Solar settings → Solar server address*. While it has live Wi-Fi readings, the inverter limit below is
+checked every 5 seconds.
+
+When the solar server isn't set or can't be reached, it reads the **EG4 Monitor cloud** instead, the same data the EG4 app shows,
+about once a minute. Connect that under *Solar settings* with your EG4 Monitor email and password. The password
 is saved in `solar-settings.json` in the data folder (mode 600). The EG4 calls follow
 [pylxpweb](https://github.com/joyfulhouse/pylxpweb), which isn't used directly because it needs Python 3.12 and YunoHost 12 has 3.11.
 
@@ -123,8 +128,8 @@ With the dump load switched on, the server signed in to iCOMM, and **Electric** 
 - Vacation mode is never overridden.
 
 With a 6 kW inverter and a ~4.5 kW element, Electric-mode dumping only fits when the rest of the house uses under ~900 W.
-Hybrid absorbs less (mostly the heat pump) but rarely gets near the limit. The cloud data is up to a minute old, so this
-supplements the inverter's own overload protection; it doesn't replace it.
+Hybrid absorbs less (mostly the heat pump) but rarely gets near the limit. Readings are seconds old from the solar server and up
+to a minute old from the cloud. Either way this supplements the inverter's own overload protection; it doesn't replace it.
 
 ## Run locally (Windows/Mac/Linux)
 ```

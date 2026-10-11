@@ -300,9 +300,11 @@ dialog h3{margin:0 0 8px;font-size:20px}dialog p{margin:0 0 18px;color:var(--dim
 
 <div class="card" style="margin-bottom:16px">
   <details class="cfg" id="solCfg"><summary>Solar settings</summary>
-  <p class="muted" style="margin:12px 0 0">Uses the same account as the EG4 Monitor app. The inverter's Wi-Fi dongle uploads its data there, and this server
-    reads it about once a minute. Your EG4 password is saved on this server, readable only by the app.</p>
+  <p class="muted" style="margin:12px 0 0">Best: point this at your solar server (the EG4 solar dashboard). When it reads the inverter's Wi-Fi dongle,
+    readings arrive every few seconds and the inverter cut-off reacts within seconds. If the solar server can't be reached, this reads the
+    EG4 Monitor account below instead, about once a minute. Your EG4 password is saved on this server, readable only by the app.</p>
   <form class="form" onsubmit="return false">
+    <label style="grid-column:1/-1">Solar server address<input id="sfUrl" autocomplete="off" spellcheck="false" placeholder="http://127.0.0.1:8766 (same YunoHost server)"></label>
     <label>EG4 Monitor email / username<input id="sfAcct" autocomplete="off"></label>
     <label>EG4 Monitor password<input id="sfPass" type="password" autocomplete="off"></label>
     <label>Inverter<select id="sfSerial"><option value="">First on the account</option></select></label>
@@ -319,7 +321,7 @@ dialog h3{margin:0 0 8px;font-size:20px}dialog p{margin:0 0 18px;color:var(--dim
   <div class="row" style="margin-top:14px"><button type="button" id="sfConnect">Connect &amp; find inverter</button><button type="button" class="primary" id="sfSave">Save</button><span class="muted" id="sfMsg"></span></div>
   <p class="note">The water heater is on the inverter's output, so the element (about 4,500 W) counts against the inverter's rating. Electric-mode
     dumping only starts when the house load plus 4,500 W stays under the cut-off. If the output reaches the cut-off while dumping, the heater goes
-    back to its previous mode right away. The cloud data is about a minute old, so this backs up the inverter's own overload protection; it doesn't replace it.</p>
+    back to its previous mode right away. With the solar server reading the dongle, the cut-off is checked every 5 seconds; from the EG4 cloud the data is about a minute old. Either way this backs up the inverter's own overload protection; it doesn't replace it.</p>
   </details>
 </div>
 </section>
@@ -887,8 +889,9 @@ function renderSolar(){
   $("#sMeter").setAttribute("aria-label", `Inverter at ${Math.round(pct)}% of its rating`);
   $("#sInvSub").textContent = live ? `${Math.round(pct)}% of ${kW(s.rated_w)}${hot ? " - at the cut-off" : ""}  |  cut-off ${kW(p.limit_w)}` : "";
   $("#sGrid").textContent = !live ? "-" : live.grid_in > 0 ? `Using ${kW(live.grid_in)} from the grid` : live.grid_out > 0 ? `Sending ${kW(live.grid_out)} to the grid` : "Not using the grid";
-  $("#solUpdated").textContent = live ? `${live.status ? live.status + ", " : ""}updated ${ago(live.t)}` : "";
-  $("#solErr").textContent = p.error || (p.configured ? "" : "Connect your EG4 Monitor account under Solar settings below to start.");
+  $("#solUpdated").textContent = live ? `${live.status ? live.status + ", " : ""}updated ${ago(live.t)}${p.source ? " · from " + p.source : ""}` : "";
+  $("#solErr").textContent = p.error || (p.server_error ? `${p.server_error}. Reading EG4 Monitor instead.` : "")
+    || (p.configured ? "" : "Set your solar server or connect your EG4 Monitor account under Solar settings below to start.");
   if(!p.configured && !solFormLoaded) $("#solCfg").open = true;
 
   $("#dumpOn").checked = c.enabled;
@@ -919,6 +922,7 @@ function renderSolar(){
 
 function fillSolarForm(s){
   solFormLoaded = true;
+  $("#sfUrl").value = s.solar_url || "";
   $("#sfAcct").value = s.eg4_account; $("#sfPass").value = ""; $("#sfPass").placeholder = s.has_password ? "saved (leave empty to keep)" : "";
   const ser = $("#sfSerial");
   if(s.serial && ![...ser.options].some(o => o.value === s.serial)) ser.append(el("option", {value:s.serial, textContent:s.serial}));
@@ -928,7 +932,7 @@ function fillSolarForm(s){
   $("#sfPause").value = s.pause_min; $("#sfSwitch").value = s.min_switch_min;
 }
 function solarBody(){
-  return {eg4_account:$("#sfAcct").value, eg4_password:$("#sfPass").value || null, serial:$("#sfSerial").value,
+  return {solar_url:$("#sfUrl").value, eg4_account:$("#sfAcct").value, eg4_password:$("#sfPass").value || null, serial:$("#sfSerial").value,
           start_soc:+$("#sfStart").value, stop_soc:+$("#sfStop").value, min_pv:+$("#sfPv").value, max_discharge:+$("#sfDis").value,
           rated_w:+$("#sfRated").value, limit_pct:+$("#sfLimit").value, overload_action:$("#sfAction").value,
           pause_min:+$("#sfPause").value, min_switch_min:+$("#sfSwitch").value};

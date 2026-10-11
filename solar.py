@@ -1,7 +1,8 @@
 """EG4 inverter monitor and solar dump-load controller.
 
-Reads the inverter (solar, battery, inverter output) from the EG4 Monitor cloud - the same data the EG4 app shows,
-uploaded by the inverter's Wi-Fi dongle - and, when the batteries are full and solar is plentiful, switches the water
+Reads the inverter (solar, battery, inverter output) from the owner's solar server (eg4-dashboard, which reads the inverter's
+Wi-Fi dongle directly every few seconds) or, when that isn't set up or can't be reached, from the EG4 Monitor cloud - the same
+data the EG4 app shows - and, when the batteries are full and solar is plentiful, switches the water
 heater to Electric or Hybrid mode so the surplus heats water instead of being curtailed. The heater goes back to its
 previous mode when the surplus ends. Optionally the setpoint is raised while dumping (so a
 full tank keeps absorbing heat) and put back afterwards. If the inverter output gets near its rating, dumping stops at once and the dump
@@ -23,6 +24,8 @@ import aiohttp
 
 EG4_URL = "https://monitor.eg4electronics.com"
 POLL_SECS = 60
+FAST_SECS = 5          # while the solar server has live Wi-Fi readings: the inverter limit is checked this often
+SERVER_MAX_AGE = 180   # a solar-server reading older than this counts as no reading (it falls back to EG4)
 KEEP_DAYS = 60
 START_STREAK = 3       # readings in a row that must allow dumping before it starts
 DISCHARGE_STREAK = 2   # readings in a row of battery discharge before it stops
@@ -30,7 +33,7 @@ MAX_READ_FAILS = 3     # stop dumping when the inverter can't be read this many 
 ELEMENT_W = 4500       # what the heater can add to the inverter's output in Electric mode
 log = logging.getLogger("uvicorn.error")
 
-DEFAULTS = dict(eg4_account="", eg4_password="", serial="",
+DEFAULTS = dict(eg4_account="", eg4_password="", serial="", solar_url="",
                 enabled=False, dump_mode="electric", heater="", boost=False, boost_setpoint=130,
                 start_soc=98, stop_soc=90, min_pv=1500, max_discharge=300,
                 rated_w=6000, limit_pct=90, overload_action="disable", pause_min=30, min_switch_min=10)
@@ -100,6 +103,32 @@ def normalize(rt):
                 status=rt.get("statusText") or "", lost=bool(rt.get("lost")))
 
 
+def normalize_server(j):
+    """The solar server's /api/live -> the same numbers as normalize()."""
+    g = lambda k: int(float(j.get(k) or 0))
+    grid = g("grid")
+    via = {"local": "Wi-Fi", "cloud": "EG4 cloud", "demo": "demo"}.get(j.get("source"), j.get("source") or "")
+    return dict(t=round(time.time()), pv=g("pv"), soc=j.get("soc"), charge=g("charge"), discharge=g("discharge"),
+                inv=g("inv"), grid_in=max(grid, 0), grid_out=max(-grid, 0), status=j.get("status") or "", lost=bool(j.get("lost")),
+                source=f"solar server ({via})" if via else "solar server", fast=j.get("source") == "local")
+
+
+async def read_server(url, timeout=6):
+    """The latest reading from the solar server, or an exception saying why not."""
+    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=timeout)) as http:
+        async with http.get(url.rstrip("/") + "/api/live", headers={"Accept": "application/json"}) as r:
+            if r.status != 200:
+                try:
+                    why = (await r.json()).get("detail")
+                except (aiohttp.ContentTypeError, ValueError):
+                    why = None
+                raise EG4Error(f"the solar server answered {r.status}" + (f": {why}" if why else ""))
+            j = await r.json()
+    if j.get("stale") or (j.get("age") or 0) > SERVER_MAX_AGE:
+        raise EG4Error(f"the solar server's last reading is {j.get('age')} s old")
+    return normalize_server(j)
+
+
 # --------------------------------------------------------------------------- controller
 class Solar:
     """Polls the inverter, logs it, and runs the dump-load rules. Heater access comes from the server:
@@ -120,6 +149,8 @@ class Solar:
         self.live = None        # last normalized reading
         self.error = None       # last read error
         self.fails = 0
+        self.server_error = None   # why the solar server couldn't be used (EG4 is read instead)
+        self.last_full = 0         # when the rules last ran in full (they run once a minute; fast readings only guard the limit)
         self.start_streak = self.discharge_streak = 0
         self.wake = asyncio.Event()
         self.task = None
@@ -175,6 +206,10 @@ class Solar:
         self.state["events"] = (self.state["events"] + [dict(t=round(time.time()), msg=msg)])[-40:]
         self._save(self.state_file, self.state)
 
+    def has_source(self):
+        s = self.settings
+        return bool(s["solar_url"] or (s["eg4_account"] and s["eg4_password"]))
+
     def _drop_client(self):
         if self.client:
             asyncio.create_task(self.client.close())
@@ -191,7 +226,22 @@ class Solar:
             await c.close()
 
     async def read(self):
+        """Solar server first (when set), else EG4 Monitor. None if neither is set up."""
         s = self.settings
+        if s["solar_url"]:
+            try:
+                r = await read_server(s["solar_url"])
+                if self.server_error:
+                    log.info("Solar dump load: the solar server is answering again")
+                self.server_error = None
+                return r
+            except Exception as e:
+                why = f"Couldn't reach the solar server: {e or type(e).__name__}"
+                if why != self.server_error:
+                    log.warning("Solar dump load: %s%s", why, "; reading EG4 Monitor instead" if s["eg4_account"] else "")
+                self.server_error = why
+                if not (s["eg4_account"] and s["eg4_password"]):
+                    raise EG4Error(why)
         if not (s["eg4_account"] and s["eg4_password"]):
             return None
         if self.client is None:
@@ -202,7 +252,7 @@ class Solar:
                 raise EG4Error("No inverter found on this EG4 account")
             s["serial"] = inv[0]["serial"]
             self._save(self.settings_file, s, private=True)
-        return normalize(await self.client.runtime(s["serial"]))
+        return dict(normalize(await self.client.runtime(s["serial"])), source="EG4 cloud", fast=False)
 
     # ---- loop
     def start(self):
@@ -230,9 +280,14 @@ class Solar:
                 self._prune()
             self.wake.clear()
             try:
-                await asyncio.wait_for(self.wake.wait(), POLL_SECS)
+                await asyncio.wait_for(self.wake.wait(), FAST_SECS if self.fast else POLL_SECS)
             except asyncio.TimeoutError:
                 pass
+
+    @property
+    def fast(self):
+        """Reading every few seconds: the solar server has live Wi-Fi readings."""
+        return bool(self.live and self.live.get("fast") and not self.error)
 
     async def tick(self):
         reading = None
@@ -244,10 +299,24 @@ class Solar:
             self._drop_client()
         except Exception as e:
             self.error, self.fails = f"Couldn't read the inverter: {e or type(e).__name__}", self.fails + 1
+        now = time.time()
+        if reading and reading.get("fast") and now - self.last_full < POLL_SECS - 1:
+            # in between the once-a-minute rounds: only the inverter limit is checked, so a surge stops dumping within seconds
+            self.live = reading
+            return await self.guard(reading)
+        self.last_full = now
         if reading:
             self.live = reading
-            self._append(dict(reading, dump=self.state["dumping"]))
+            self._append(dict({k: v for k, v in reading.items() if k not in ("source", "fast")}, dump=self.state["dumping"]))
         await self.control(reading)
+
+    async def guard(self, r):
+        """The inverter-limit check on its own (the rest of the rules stay on their once-a-minute pace)."""
+        s = self.settings
+        limit = s["rated_w"] * s["limit_pct"] / 100
+        if self.state["dumping"] and s["enabled"] and r["inv"] >= limit:
+            await self._stop(f"inverter output {r['inv']:,} W reached {s['limit_pct']}% of {s['rated_w']:,} W")
+            self._overload_action()
 
     async def control(self, r):
         s, st, now = self.settings, self.state, time.time()
@@ -256,7 +325,7 @@ class Solar:
             if not s["enabled"]:
                 return await self._stop("dump load turned off")
             if r is None:
-                if self.fails >= MAX_READ_FAILS or not (s["eg4_account"] and s["eg4_password"]):
+                if self.fails >= MAX_READ_FAILS or not self.has_source():
                     await self._stop("the inverter couldn't be read, so stopping to be safe")
                 return
             if r["inv"] >= limit:
@@ -294,8 +363,8 @@ class Solar:
         s, st, now = self.settings, self.state, time.time()
         if not s["enabled"]:
             return "Dump load is off"
-        if not (s["eg4_account"] and s["eg4_password"]):
-            return "Connect your EG4 account in Solar settings"
+        if not self.has_source():
+            return "Set the solar server or connect your EG4 account in Solar settings"
         if r is None:
             return self.error or "Waiting for inverter data"
         if not self.heater_ready():
@@ -456,10 +525,11 @@ class Solar:
             why = self.why_not(self.live)
             state = "off" if not s["enabled"] else "paused" if time.time() < st["lockout_until"] else "ready" if why is None else "waiting"
             status = dict(state=state, text=why or "Conditions met; starting shortly")
-        return dict(configured=bool(s["eg4_account"] and s["eg4_password"]), live=self.live, error=self.error,
+        return dict(configured=self.has_source(), live=self.live, error=self.error, server_error=self.server_error,
+                    source=(self.live or {}).get("source"),
                     control=dict({k: s[k] for k in CONTROL_KEYS}, boosted=st["boosted"], boost_to=st["boost_to"], **status),
                     limit_w=round(s["rated_w"] * s["limit_pct"] / 100), events=st["events"][-8:][::-1],
-                    settings=self.public_settings(), day=self.day(), poll_secs=POLL_SECS)
+                    settings=self.public_settings(), day=self.day(), poll_secs=FAST_SECS if self.fast else POLL_SECS)
 
 
 # --------------------------------------------------------------------------- demo
